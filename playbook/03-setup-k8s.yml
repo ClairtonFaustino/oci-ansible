@@ -38,18 +38,13 @@
         - kubeadm
         - kubectl
 
-    - name: Baixar chave GPG do Helm
-      shell: "curl -fsSL https://baltocdn.com/helm/signing.asc | gpg --dearmor -o /usr/share/keyrings/helm.gpg"
+    - name: Baixar o script oficial de instalação do Helm
+      get_url:
+        url: https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+        dest: /tmp/get_helm.sh
+        mode: '0700'
+
+    - name: Executar o script de instalação do Helm
+      command: /tmp/get_helm.sh
       args:
-        creates: /usr/share/keyrings/helm.gpg
-
-    - name: Adicionar repositório do Helm
-      copy:
-        dest: /etc/apt/sources.list.d/helm-stable-debian.list
-        content: "deb [arch=amd64 signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main"
-
-    - name: Instalar o Helm
-      apt:
-        name: helm
-        state: present
-        update_cache: yes
+        creates: /usr/local/bin/helm
