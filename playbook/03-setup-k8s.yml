@@ -1,0 +1,55 @@
+---
+- name: Instalar componentes essenciais do Kubernetes
+  hosts: kubernetes
+  become: yes
+  tasks:
+
+    - name: Garantir que o diretório de keyrings do apt existe
+      file:
+        path: /etc/apt/keyrings
+        state: directory
+        mode: '0755'
+
+    - name: Fazer o download da chave GPG pública do repositório Kubernetes
+      shell: "curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.36/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg"
+      args:
+        creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+
+    - name: Adicionar o repositório do Kubernetes
+      copy:
+        dest: /etc/apt/sources.list.d/kubernetes.list
+        content: 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.36/deb/ /'
+
+    - name: Atualizar o cache do apt e instalar kubelet, kubeadm e kubectl
+      apt:
+        name:
+          - kubelet
+          - kubeadm
+          - kubectl
+        state: present
+        update_cache: yes
+
+    - name: Travar as versões dos pacotes
+      dpkg_selections:
+        name: "{{ item }}"
+        selection: hold
+      loop:
+        - kubelet
+        - kubeadm
+        - kubectl
+
+    - name: Baixar chave GPG do Helm
+      shell: "curl -fsSL https://baltocdn.com/helm/signing.asc | gpg --dearmor -o /usr/share/keyrings/helm.gpg"
+      args:
+        creates: /usr/share/keyrings/helm.gpg
+
+    - name: Adicionar repositório do Helm
+      copy:
+        dest: /etc/apt/sources.list.d/helm-stable-debian.list
+        content: "deb [arch=amd64 signed-by=/usr/share/keyrings/helm.gpg] https://baltocdn.com/helm/stable/debian/ all main"
+
+    - name: Instalar o Helm
+      apt:
+        name: helm
+        state: present
+        update_cache: yes

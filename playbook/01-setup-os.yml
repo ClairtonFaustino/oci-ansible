@@ -1,0 +1,47 @@
+---
+- name: Preparar o Sistema Operacional para o Kubernetes
+  hosts: kubernetes
+  become: yes
+  tasks:
+
+    - name: Desabilitar o Swap imediatamente
+      command: swapoff -a
+      ignore_errors: yes
+
+    - name: Remover o Swap do /etc/fstab para persistir no boot
+      replace:
+        path: /etc/fstab
+        regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+        replace: '# \1'
+
+    - name: Criar arquivo de configuração para módulos do Kernel do containerd
+      copy:
+        dest: /etc/modules-load.d/containerd.conf
+        content: |
+          overlay
+          br_netfilter
+
+    - name: Carregar o módulo overlay
+      modprobe:
+        name: overlay
+        state: present
+
+    - name: Carregar o módulo br_netfilter
+      modprobe:
+        name: br_netfilter
+        state: present
+
+    - name: Configurar os parâmetros do sysctl para o Kubernetes
+      copy:
+        dest: /etc/sysctl.d/99-kubernetes-cri.conf
+        content: |
+          net.bridge.bridge-nf-call-iptables  = 1
+          net.ipv4.ip_forward                 = 1
+          net.bridge.bridge-nf-call-ip6tables = 1
+
+    - name: Aplicar os parâmetros do sysctl
+      command: sysctl --system
+
+    - name: Atualizar o cache do apt
+      apt:
+        update_cache: yes

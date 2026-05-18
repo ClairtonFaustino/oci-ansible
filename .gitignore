@@ -1,0 +1,48 @@
+# Arquivos de retry
+*.retry
+
+# Logs de execução
+*.log
+ansible.log
+
+# Ansible Vault e Senhas
+.vault_pass
+.vault_pass.txt
+vault.pass
+*.password
+*.pwd
+*.pem
+*.key
+
+# Dependências (Roles e Collections)
+collections/
+ansible_collections/
+
+# Cache e Variáveis Locais
+inventory/hosts.ini
+
+# Cache de facts do Ansible
+.facts/
+fact_cache/
+.ansible_facts/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.env
+venv/
+
+# Sistema Operacional e Editores
+.DS_Store
+*~
+*.swp
+*.swo
+.vscode/
+.idea/
+
+# Kubernetes
+kubeconfig
+*kubeconfig*
+admin.conf
+.kube/

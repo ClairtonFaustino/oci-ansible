@@ -1,0 +1,5 @@
+---
+- import_playbook: 01-setup-os.yml
+- import_playbook: 02-setup-runtime.yml
+- import_playbook: 03-setup-k8s.yml
+- import_playbook: 04-addons.yml
