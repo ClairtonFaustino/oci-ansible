@@ -1,0 +1,67 @@
+---
+- name: Deploy GitOps and Observability Stack
+  hosts: master
+  become: yes
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+  
+  tasks:
+    - name: Garantir dependências do Ansible para módulos Kubernetes
+      apt:
+        name: python3-pip
+        state: present
+        update_cache: yes
+
+    - name: Instalar bibliotecas Python (kubernetes e PyYAML)
+      pip:
+        name:
+          - kubernetes
+          - PyYAML
+        state: present
+        break_system_packages: yes
+
+    - name: Adicionar repositórios Helm oficiais
+      kubernetes.core.helm_repository:
+        name: "{{ item.name }}"
+        repo_url: "{{ item.url }}"
+      loop:
+        - { name: 'argo', url: 'https://argoproj.github.io/argo-helm' }
+        - { name: 'metrics-server', url: 'https://kubernetes-sigs.github.io/metrics-server/' }
+        - { name: 'prometheus-community', url: 'https://prometheus-community.github.io/helm-charts' }
+
+    - name: Instalar Metrics Server (Ajuste Bare-Metal)
+      kubernetes.core.helm:
+        name: metrics-server
+        chart_ref: metrics-server/metrics-server
+        release_namespace: kube-system
+        state: present
+        values:
+          args:
+            - --kubelet-insecure-tls
+
+    - name: Instalar ArgoCD
+      kubernetes.core.helm:
+        name: argocd
+        chart_ref: argo/argo-cd
+        release_namespace: argocd
+        create_namespace: yes
+        state: present
+        values:
+          server:
+            extraArgs:
+              - --insecure
+
+    - name: Instalar Kube-Prometheus-Stack (Prometheus, Alertmanager e Grafana)
+      kubernetes.core.helm:
+        name: prometheus-stack
+        chart_ref: prometheus-community/kube-prometheus-stack
+        release_namespace: observability
+        create_namespace: yes
+        state: present
+        values:
+          grafana:
+            adminPassword: "admin"
+          prometheus:
+            prometheusSpec:
+              serviceMonitorSelectorNilUsesHelmValues: false 
+              podMonitorSelectorNilUsesHelmValues: false
