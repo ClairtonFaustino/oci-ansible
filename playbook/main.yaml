@@ -3,3 +3,4 @@
 - import_playbook: 02-setup-runtime.yml
 - import_playbook: 03-setup-k8s.yml
 - import_playbook: 04-addons.yml
+- import_playbook: 05-gitops-observability.yml
