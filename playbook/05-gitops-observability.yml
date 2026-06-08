@@ -28,6 +28,7 @@
         - { name: 'argo', url: 'https://argoproj.github.io/argo-helm' }
         - { name: 'metrics-server', url: 'https://kubernetes-sigs.github.io/metrics-server/' }
         - { name: 'prometheus-community', url: 'https://prometheus-community.github.io/helm-charts' }
+        - { name: 'sealed-secrets', url: 'https://bitnami-labs.github.io/sealed-secrets' }
 
     - name: Instalar Metrics Server (Ajuste Bare-Metal)
       kubernetes.core.helm:
@@ -50,6 +51,22 @@
           server:
             extraArgs:
               - --insecure
+
+    - name: Instalar Sealed Secrets Controller
+      kubernetes.core.helm:
+        name: sealed-secrets
+        chart_ref: sealed-secrets/sealed-secrets
+        release_namespace: kube-system
+        state: present
+        values:
+          fullnameOverride: sealed-secrets-controller
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
 
     - name: Instalar Kube-Prometheus-Stack (Prometheus, Alertmanager e Grafana)
       kubernetes.core.helm:
