@@ -15,7 +15,16 @@
       changed_when: false
       failed_when: envoy_nodeport.stdout | length == 0
 
-    - name: Redirecionar trafego externo da porta 80 para NodePort do Envoy
+    - name: Remover regra antiga de redirecionamento (se existir)
+      ansible.builtin.iptables:
+        table: nat
+        chain: PREROUTING
+        comment: oci-envoy-gateway-http
+        jump: REDIRECT
+        state: absent
+      failed_when: false
+
+    - name: Redirecionar trafego da porta 80 para NodePort do Envoy (PREROUTING)
       ansible.builtin.iptables:
         table: nat
         chain: PREROUTING
@@ -25,7 +34,26 @@
         jump: REDIRECT
         to_ports: "{{ envoy_nodeport.stdout }}"
         comment: oci-envoy-gateway-http
-        action: append
+        action: insert
+        rule_num: 1
+
+    - name: Remover regra antiga de INPUT na NodePort (se existir)
+      ansible.builtin.iptables:
+        chain: INPUT
+        comment: oci-envoy-gateway-nodeport
+        jump: ACCEPT
+        state: absent
+      failed_when: false
+
+    - name: Permitir trafego externo na NodePort do Envoy (filter INPUT)
+      ansible.builtin.iptables:
+        chain: INPUT
+        protocol: tcp
+        destination_port: "{{ envoy_nodeport.stdout }}"
+        jump: ACCEPT
+        comment: oci-envoy-gateway-nodeport
+        action: insert
+        rule_num: 1
 
     - name: Evitar prompt do iptables-persistent
       debconf:
@@ -50,3 +78,9 @@
     - name: Persistir regras iptables
       command: netfilter-persistent save
       changed_when: true
+
+    - name: Exibir URL de acesso ao preview
+      debug:
+        msg: >-
+          Preview externo (exemplo MR 1):
+          http://pr-1.{{ ansible_host | replace('.', '-') }}.nip.io:{{ envoy_nodeport.stdout }}/
