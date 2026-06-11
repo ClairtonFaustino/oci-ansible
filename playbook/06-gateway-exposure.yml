@@ -1,0 +1,52 @@
+---
+- name: Expor Envoy Gateway na porta 80 (OCI bare metal)
+  hosts: master
+  become: yes
+  environment:
+    KUBECONFIG: /etc/kubernetes/admin.conf
+
+  tasks:
+    - name: Obter NodePort HTTP do Envoy Gateway
+      command: >
+        kubectl get svc -n envoy-gateway-system
+        -l gateway.envoyproxy.io/owning-gateway-name=public-gateway
+        -o jsonpath={.items[0].spec.ports[?(@.port==80)].nodePort}
+      register: envoy_nodeport
+      changed_when: false
+      failed_when: envoy_nodeport.stdout | length == 0
+
+    - name: Redirecionar trafego externo da porta 80 para NodePort do Envoy
+      ansible.builtin.iptables:
+        table: nat
+        chain: PREROUTING
+        protocol: tcp
+        destination: "{{ ansible_default_ipv4.address }}"
+        destination_port: "80"
+        jump: REDIRECT
+        to_ports: "{{ envoy_nodeport.stdout }}"
+        comment: oci-envoy-gateway-http
+        action: append
+
+    - name: Evitar prompt do iptables-persistent
+      debconf:
+        name: iptables-persistent
+        question: iptables-persistent/autosave_v4
+        value: "true"
+        vtype: boolean
+
+    - name: Evitar prompt do iptables-persistent (IPv6)
+      debconf:
+        name: iptables-persistent
+        question: iptables-persistent/autosave_v6
+        value: "true"
+        vtype: boolean
+
+    - name: Instalar iptables-persistent
+      apt:
+        name: iptables-persistent
+        state: present
+        update_cache: yes
+
+    - name: Persistir regras iptables
+      command: netfilter-persistent save
+      changed_when: true
