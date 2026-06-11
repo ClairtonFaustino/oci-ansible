@@ -22,7 +22,7 @@
       command: kubectl apply -f /tmp/metrics-server.yaml
 
     - name: 3. Instalar os CRDs da Gateway API
-      command: kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.0.0/standard-install.yaml
+      command: kubectl apply -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.1/standard-install.yaml
 
     - name: 4. Instalar o Envoy Gateway
       shell: |
